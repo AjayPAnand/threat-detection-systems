@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  threat-detection-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=staging
+      - DEBUG=false
+    volumes:
+      - ../logs:/app/logs
+    networks:
+      - threat-detection-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - threat-detection-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - threat-detection-network
+
+networks:
+  threat-detection-network:
+    driver: bridge

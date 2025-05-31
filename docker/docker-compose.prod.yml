@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  threat-detection-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "80:5000"
+    environment:
+      - FLASK_ENV=production
+      - DEBUG=false
+      - SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - ../logs:/app/logs
+      - ../models:/app/models
+    networks:
+      - threat-detection-network
+    restart: always
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+    volumes:
+      - ../nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - threat-detection-api
+    networks:
+      - threat-detection-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - threat-detection-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - threat-detection-network
+
+volumes:
+  grafana-storage:
+
+networks:
+  threat-detection-network:
+    driver: bridge
